@@ -209,5 +209,56 @@ class HeartbeatTests(unittest.TestCase):
                                                  data="https://hc-ping.com/uuid", name="heartbeat")
 
 
+class MainWiringTests(unittest.TestCase):
+    def make_update(self, text=None, callback=False):
+        from telegram import Update
+        update = mock.Mock(spec=Update)
+        update.callback_query = object() if callback else None
+        update.effective_message = mock.Mock(text=text) if text is not None else None
+        return update
+
+    def test_describe_error_source(self):
+        from bot.main import describe_error_source
+        ctx = mock.Mock(job=None)
+        self.assertEqual(describe_error_source(self.make_update("/portfolio@TestBot arg"), ctx), "komut /portfolio")
+        self.assertEqual(describe_error_source(self.make_update("gizli kişisel mesaj"), ctx), "mesaj")
+        self.assertEqual(describe_error_source(self.make_update(callback=True), ctx), "buton")
+        job_ctx = mock.Mock()
+        job_ctx.job.name = "check_alerts"
+        self.assertEqual(describe_error_source(None, job_ctx), "görev check_alerts")
+        self.assertEqual(describe_error_source(None, mock.Mock(job=None)), "genel")
+
+    def test_error_handler_notifies_without_message_content(self):
+        from bot.main import error_handler
+        bot = FakeBot()
+        from bot.services.admin_notify import AdminNotifier
+        ctx = mock.Mock(job=None)
+        ctx.error = KeyError("secret-detail")
+        ctx.application.bot_data = {"notifier": AdminNotifier(bot, [1])}
+        run(error_handler(self.make_update("çok gizli mesaj"), ctx))
+        self.assertEqual(len(bot.sent), 1)
+        self.assertIn("KeyError", bot.sent[0][1])
+        self.assertNotIn("gizli", bot.sent[0][1])
+        self.assertNotIn("secret-detail", bot.sent[0][1])
+
+    def test_startup_and_shutdown_hooks(self):
+        from bot.main import on_startup, on_shutdown
+        from bot.database import db
+        db.set_meta("clean_shutdown", "0")       # önceki çalışma çökmüş gibi
+        bot = FakeBot()
+        app = mock.Mock()
+        app.bot = bot
+        app.bot_data = {}
+        with mock.patch("bot.main.ADMIN_IDS", [7]), mock.patch("bot.main.HEALTHCHECK_URL", "https://hc/x"), \
+                mock.patch("bot.main.resolve_version", return_value="abc1234"):
+            run(on_startup(app))
+        self.assertIn("abc1234", bot.sent[0][1])
+        self.assertIn("düzgün kapanmadı", bot.sent[0][1])
+        self.assertEqual(app.bot_data["version"], "abc1234")
+        app.job_queue.run_repeating.assert_called_once()
+        run(on_shutdown(app))
+        self.assertEqual(db.get_meta("clean_shutdown"), "1")
+
+
 if __name__ == "__main__":
     unittest.main()
