@@ -58,3 +58,7 @@ Free-text messages (not commands) are handled by a rule-based conversation layer
 ```
 
 Set `RUN_LIVE_TESTS=1` to also run the acceptance tests against the real CoinGecko API.
+
+## Sunucuda 7/24 çalıştırma
+
+Kurulum ve işletim rehberi: [`deploy/README.md`](deploy/README.md).
