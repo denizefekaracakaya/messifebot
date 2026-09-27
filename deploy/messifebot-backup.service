@@ -1,0 +1,9 @@
+[Unit]
+Description=MessifeBot veritabanı yedeği
+
+[Service]
+Type=oneshot
+User=messifebot
+Group=messifebot
+Environment=MESSIFEBOT_DATA=/var/lib/messifebot
+ExecStart=/bin/bash /opt/messifebot/deploy/backup.sh
