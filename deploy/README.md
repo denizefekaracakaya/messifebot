@@ -17,6 +17,8 @@ Tasarım: `docs/superpowers/specs/2026-09-27-7-24-hosting-design.md`.
    - SSH keys: kendi bilgisayarınızdaki açık anahtarı yükleyin (yoksa PowerShell: `ssh-keygen -t ed25519`).
 3. Oluşunca Public IP'yi not edin. Bağlanın: `ssh ubuntu@IP`
 4. Önerilen: hesabı "Pay As You Go"ya yükseltin. Always Free kaynaklar yine ücretsizdir; bu, boşta kalan ücretsiz VM'lerin geri alınmasını engeller.
+5. Güvenlik: Oracle'daki security list'te sadece gelen TCP 22 (SSH) açık olmalı (varsayılan budur; başka bir portu dışarı açmayın).
+   Parola ile SSH girişinin kapalı olduğunu doğrulayın: `sudo sshd -T | grep -i passwordauthentication` → `passwordauthentication no` yazmalı.
 
 ## 3. GitHub
 1. GitHub'da **private** repo oluşturun (ör. `messifebot`).
@@ -27,9 +29,10 @@ Tasarım: `docs/superpowers/specs/2026-09-27-7-24-hosting-design.md`.
    (Oluşan iki dosyayı repoya EKLEMEYİN.)
 
 ## 4. Sunucu kurulumu
-1. Kurulum betiğini ve Actions açık anahtarını sunucuya kopyalayın (yerelde):
-   `scp deploy/setup_server.sh messifebot_actions.pub ubuntu@IP:~/`
-2. Sunucuda: `sudo bash setup_server.sh git@github.com:KULLANICI/messifebot.git messifebot_actions.pub`
+1. `deploy/` klasörünün TAMAMINI ve Actions açık anahtarını sunucuya kopyalayın (yerelde, `telegram-bot/` içinden):
+   `scp -r deploy ubuntu@IP:~/messifebot-deploy && scp messifebot_actions.pub ubuntu@IP:~/`
+2. Sunucuda, kopyalanan klasörden çalıştırın: `sudo bash ~/messifebot-deploy/setup_server.sh git@github.com:KULLANICI/messifebot.git ~/messifebot_actions.pub`
+   Betik ASLA `/opt/messifebot` içindeki klondan çalıştırılmamalıdır — root, messifebot/deploy kullanıcısının yazabildiği hiçbir dosyayı çalıştırmaz veya kopyalamaz; betik bunu kendisi kontrol edip gerekirse durur.
 3. Betik bir anahtar gösterip bekler: GitHub → repo → Settings → Deploy keys → Add deploy key → yapıştırın (**Allow write access kapalı**) → Enter.
 
 ## 5. Ortam dosyası
@@ -62,7 +65,7 @@ Not: Windows'ta bot zorla kapatıldıysa ilk sunucu açılışında "önceki ça
 
 ## 9. Kabul testleri
 1. Küçük bir değişiklik commit + push → GitHub → Actions yeşil → Telegram'a yeni sürümle "✅ Bot başladı".
-2. Açılışta hata veren bir commit (ör. `bot/main.py` başına `raise SystemExit(1)`) push → Actions kırmızı → "⚠️ Deploy başarısız" mesajı → düzeltme commit'i push.
+2. Açılışta hata veren bir commit push edin (ör. `bot/main.py` içindeki `def main():` fonksiyonunun İLK SATIRINA `raise SystemExit(1)` ekleyin — dosyanın başına değil, çünkü testler `import bot.main` yapar ama `main()`'i çağırmaz) → Actions kırmızı → "⚠️ Deploy başarısız" mesajı → düzeltme commit'i push.
 3. `sudo systemctl kill -s KILL messifebot` → 10 sn içinde yeniden başlar, "düzgün kapanmadı" notu gelir.
 4. `sudo systemctl stop messifebot` → 10+ dk bekle → healthchecks.io e-postası → `sudo systemctl start messifebot`.
 5. `sudo -u messifebot bash /opt/messifebot/deploy/backup.sh --send` → Telegram'a yedek dosyası gelir.
@@ -78,4 +81,4 @@ Not: Windows'ta bot zorla kapatıldıysa ilk sunucu açılışında "önceki ça
       sudo systemctl stop messifebot
       gunzip -c /var/lib/messifebot/backups/chat_stats-YYYYMMDD-HHMM.db.gz | sudo -u messifebot tee /var/lib/messifebot/chat_stats.db >/dev/null
       sudo systemctl start messifebot
-- `deploy/deploy.sh` veya systemd dosyaları değişirse: `sudo bash /opt/messifebot/deploy/setup_server.sh git@github.com:KULLANICI/messifebot.git`
+- `deploy/deploy.sh` veya systemd dosyaları değişirse: yerelde `deploy/` klasörünü tekrar sunucuya kopyalayın (`scp -r deploy ubuntu@IP:~/messifebot-deploy`) ve `sudo bash ~/messifebot-deploy/setup_server.sh git@github.com:KULLANICI/messifebot.git` çalıştırın (ASLA `/opt/messifebot` içinden değil).

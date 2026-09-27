@@ -19,12 +19,12 @@ notify() { as_app bash "$APP_DIR/deploy/notify.sh" "$1" || true; }
 short() { as_app git -C "$APP_DIR" rev-parse --short "$1"; }
 
 switch_to() {  # $1 = hedef commit, $2 = şu anki commit
-  as_app git -C "$APP_DIR" reset --quiet --hard "$1"
+  as_app git -C "$APP_DIR" reset --quiet --hard "$1" || return 1
   if [ "$1" != "$2" ] && ! as_app git -C "$APP_DIR" diff --quiet "$2" "$1" -- requirements.txt; then
     echo "==> requirements.txt değişti, bağımlılıklar kuruluyor"
-    as_app "$APP_DIR/.venv/bin/pip" install --quiet -r "$APP_DIR/requirements.txt"
+    as_app "$APP_DIR/.venv/bin/pip" install --quiet -r "$APP_DIR/requirements.txt" || return 1
   fi
-  short "$1" | as_app tee "$DATA_DIR/version" >/dev/null
+  short "$1" | as_app tee "$DATA_DIR/version" >/dev/null || return 1
 }
 
 healthy() {
@@ -44,17 +44,21 @@ as_app git -C "$APP_DIR" fetch --quiet origin main
 NEW=$(as_app git -C "$APP_DIR" rev-parse origin/main)
 echo "==> $(short "$PREV") -> $(short "$NEW")"
 
-switch_to "$NEW" "$PREV"
-if healthy; then
+if switch_to "$NEW" "$PREV" && healthy; then
   echo "✅ Deploy tamam: $(short "$NEW") çalışıyor"
   exit 0
 fi
 
 echo "❌ $(short "$NEW") sağlıklı başlamadı. Son loglar:"
 journalctl -u "$SERVICE" -n 40 --no-pager || true
+
+if [ "$NEW" = "$PREV" ]; then
+  notify "🚨 Deploy başarısız: $(short "$NEW") sağlıklı başlamadı ve geri dönülecek başka sürüm yok. Sunucuyu kontrol edin."
+  exit 1
+fi
+
 echo "==> $(short "$PREV") sürümüne geri dönülüyor"
-switch_to "$PREV" "$NEW"
-if healthy; then
+if switch_to "$PREV" "$NEW" && healthy; then
   notify "⚠️ Deploy başarısız: $(short "$NEW") sağlıklı başlamadı. Önceki sürüm $(short "$PREV") ile devam ediliyor."
 else
   notify "🚨 Deploy başarısız ve önceki sürüm $(short "$PREV") de başlamadı! Sunucuyu kontrol edin."
