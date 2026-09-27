@@ -115,23 +115,29 @@ Oracle Cloud **Always Free** sanal makinesi üzerinde Ubuntu 24.04 + Python venv
   3. `bash -n deploy/*.sh` ile betiklerin sözdizimi kontrol edilir.
 - **Job `deploy`** (`needs: test`):
   1. `SSH_PRIVATE_KEY` ve `SSH_KNOWN_HOSTS` sırlarıyla `deploy@SERVER_HOST`'a bağlanır.
-  2. `sudo /opt/messifebot/deploy/deploy.sh` çalıştırır.
+  2. `sudo /usr/local/sbin/messifebot-deploy` çalıştırır.
   3. Betiğin çıkış kodu job sonucunu belirler.
 - GitHub Secrets'ta yalnızca şunlar bulunur: `SERVER_HOST`, `SSH_PRIVATE_KEY` (sadece deploy için), `SSH_KNOWN_HOSTS`. Bot sırları GitHub'a girmez.
 
 **Sunucu betiği (`deploy/deploy.sh`, root olarak çalışır, tek örnek kilidiyle)**
+
+Güvenlik notu: Repo dizini `messifebot` kullanıcısına aittir. Bot süreci ele geçirilse bile root yetkisi kazanılmasın diye root, repodaki dosyaları doğrudan çalıştırmaz:
+- `setup_server.sh`, `deploy.sh`'ı root'a ait `/usr/local/sbin/messifebot-deploy` olarak kurar; sudoers kuralı sadece bu yolu kapsar.
+- Git, pip ve bildirim betiği `messifebot` kullanıcısıyla çalıştırılır.
+- `deploy.sh` veya systemd dosyaları değişirse `setup_server.sh` yeniden çalıştırılır.
+
 1. `PREV=$(git rev-parse HEAD)`
 2. Kodu `messifebot` kullanıcısıyla çeker: `git fetch origin main && git reset --hard origin/main`.
 3. `requirements.txt` değiştiyse `.venv/bin/pip install -r requirements.txt` çalıştırır.
 4. `BOT_VERSION` değerini (kısa commit hash) `/var/lib/messifebot/version` dosyasına yazar.
 5. `systemctl restart messifebot`, ardından 20 sn bekler.
-6. `systemctl is-active messifebot` başarılıysa ve bu süre içinde yeniden başlama sayacı artmadıysa çıkış kodu 0.
+6. `systemctl is-active messifebot` başarılıysa ve servisin ana süreç kimliği (MainPID) 20 sn boyunca değişmediyse (yani bu sürede çöküp yeniden başlamadıysa) çıkış kodu 0.
 7. Aksi halde:
    - `git reset --hard $PREV` yapar, gerekirse bağımlılıkları yeniden kurar ve servisi yeniden başlatır,
    - admin'e "⚠️ Deploy başarısız, `$PREV` ile devam ediliyor" mesajını gönderir (Telegram Bot API'ye `curl`, token `/etc/messifebot.env`'den okunur),
    - çıkış kodu 1 döner.
 - Deploy sırasındaki kesinti birkaç saniyedir. Telegram bekleyen güncellemeleri saklar ve bot açılınca işler.
-- Elle deploy: `ssh deploy@sunucu 'sudo /opt/messifebot/deploy/deploy.sh'`.
+- Elle deploy: `ssh deploy@sunucu sudo /usr/local/sbin/messifebot-deploy`.
 
 ### 4.4 İzleme ve bildirimler
 
