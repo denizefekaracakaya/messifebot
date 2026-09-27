@@ -173,5 +173,41 @@ class AdminNotifierTests(unittest.TestCase):
         self.assertTrue(run(notifier.notify_error("E99", "genel")))
 
 
+class HeartbeatTests(unittest.TestCase):
+    def setUp(self):
+        self.requested = []
+
+    def fake_get(self, url, timeout):
+        self.requested.append((url, timeout))
+
+    def test_ok_pings_url(self):
+        from bot.services.heartbeat import send_heartbeat
+        status = run(send_heartbeat(FakeBot(), "https://hc-ping.com/uuid", http_get=self.fake_get))
+        self.assertEqual(status, "ok")
+        self.assertEqual(self.requested, [("https://hc-ping.com/uuid", 10)])
+
+    def test_telegram_unreachable_pings_fail(self):
+        from bot.services.heartbeat import send_heartbeat
+        status = run(send_heartbeat(FakeBot(fail=True), "https://hc-ping.com/uuid/", http_get=self.fake_get))
+        self.assertEqual(status, "fail")
+        self.assertEqual(self.requested[0][0], "https://hc-ping.com/uuid/fail")
+
+    def test_http_error_is_swallowed(self):
+        from bot.services.heartbeat import send_heartbeat
+
+        def broken_get(url, timeout):
+            raise OSError("ağ yok")
+        self.assertEqual(run(send_heartbeat(FakeBot(), "https://hc-ping.com/uuid", http_get=broken_get)), "error")
+
+    def test_schedule_only_when_url_set(self):
+        from bot.services.heartbeat import schedule_heartbeat, heartbeat_job
+        jq = mock.Mock()
+        self.assertFalse(schedule_heartbeat(jq, ""))
+        jq.run_repeating.assert_not_called()
+        self.assertTrue(schedule_heartbeat(jq, "https://hc-ping.com/uuid"))
+        jq.run_repeating.assert_called_once_with(heartbeat_job, interval=300, first=30,
+                                                 data="https://hc-ping.com/uuid", name="heartbeat")
+
+
 if __name__ == "__main__":
     unittest.main()
