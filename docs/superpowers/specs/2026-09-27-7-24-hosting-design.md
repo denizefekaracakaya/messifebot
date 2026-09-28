@@ -86,7 +86,7 @@ Oracle Cloud **Always Free** sanal makinesi üzerinde Ubuntu 24.04 + Python venv
 - `EnvironmentFile=/etc/messifebot.env`
 - `ExecStart=/opt/messifebot/.venv/bin/python -m bot.main`
 - `Restart=always`, `RestartSec=10`
-- `StartLimitIntervalSec=600`, `StartLimitBurst=5`: 10 dakikada 5 çökmeden sonra systemd yeniden başlatmayı bırakır. Bu durum healthcheck üzerinden e-posta ile fark edilir.
+- `RestartSteps=5`, `RestartMaxDelaySec=300`, `StartLimitIntervalSec=0`: art arda çökmelerde yeniden başlatma gecikmesi kademeli olarak 5 dakikaya kadar büyür; systemd asla yeniden başlatmayı bırakmaz. Bot uzun süre ayakta kalamazsa bu durum healthcheck üzerinden e-posta ile fark edilir.
 - `TimeoutStopSec=30` (python-telegram-bot SIGTERM ile düzgün kapanır)
 - Temel sertleştirme: `NoNewPrivileges=true`, `ProtectSystem=full`, `ReadWritePaths=/var/lib/messifebot`
 

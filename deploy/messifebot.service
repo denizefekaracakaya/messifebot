@@ -1,0 +1,27 @@
+[Unit]
+Description=MessifeBot Telegram botu
+After=network-online.target
+Wants=network-online.target
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+User=messifebot
+Group=messifebot
+WorkingDirectory=/opt/messifebot
+EnvironmentFile=/etc/messifebot.env
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/opt/messifebot/.venv/bin/python -m bot.main
+Restart=always
+RestartSec=10
+RestartSteps=5
+RestartMaxDelaySec=300
+TimeoutStopSec=30
+NoNewPrivileges=true
+ProtectSystem=full
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=/var/lib/messifebot /opt/messifebot
+
+[Install]
+WantedBy=multi-user.target
