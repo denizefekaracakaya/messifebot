@@ -23,10 +23,18 @@ new=$(ls "$TMP"/backups/chat_stats-2*.db.gz | grep -v 2000010 || true)
 gunzip -c "$new" > "$TMP/restored.db"
 [ "$(sqlite3 "$TMP/restored.db" 'SELECT x FROM t')" = 42 ] || fail "yedekten geri yüklenen veri yanlış"
 ! ls -A "$TMP/backups" | grep -q '^\.tmp' || fail "geçici dosya kaldı"
+! ls -A "$TMP/backups" | grep -q '\.part$' || fail ".part dosyası kaldı"
 
 # Bozuk veritabanı: yedek alınmamalı, çıkış kodu 1 olmalı
 printf 'bu bir sqlite dosyası değil' > "$TMP/chat_stats.db"
 if bash "$DEPLOY_DIR/backup.sh"; then fail "bozuk veritabanında backup.sh başarılı döndü"; fi
+
+# Veritabanı dosyası yok: yedek alınmamalı, çıkış kodu 1 olmalı, yeni dosya oluşmamalı
+rm -f "$TMP/chat_stats.db"
+before=$(ls "$TMP/backups" | wc -l)
+if bash "$DEPLOY_DIR/backup.sh"; then fail "eksik veritabanında backup.sh başarılı döndü"; fi
+after=$(ls "$TMP/backups" | wc -l)
+[ "$before" = "$after" ] || fail "eksik veritabanında yeni yedek dosyası oluştu"
 
 # notify.sh: boş env ile sessizce 0 döner; tırnaklı/boşluklu değerleri okuyabilir
 bash "$DEPLOY_DIR/notify.sh" "test" || fail "notify.sh boş env ile hata verdi"

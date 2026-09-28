@@ -17,7 +17,15 @@ SEND=0
 mkdir -p "$OUT"
 STAMP=$(date +%Y%m%d-%H%M)
 TMP="$OUT/.tmp-$STAMP.db"
-trap 'rm -f "$TMP"' EXIT
+FINAL="$OUT/chat_stats-$STAMP.db.gz"
+trap 'rm -f "$TMP" "$FINAL.part"' EXIT
+trap 'notify "❗ Yedek betiği beklenmedik bir hata verdi ($STAMP)"' ERR
+
+if [ ! -f "$DB" ]; then
+  notify "❗ Veritabanı dosyası bulunamadı"
+  echo "Veritabanı dosyası yok: $DB" >&2
+  exit 1
+fi
 
 if ! sqlite3 "$DB" ".backup '$TMP'" 2>/dev/null; then
   notify "❗ Veritabanı yedeği alınamadı ($STAMP). Sunucuyu kontrol edin."
@@ -32,8 +40,8 @@ if [ "$RESULT" != "ok" ]; then
   exit 1
 fi
 
-FINAL="$OUT/chat_stats-$STAMP.db.gz"
-gzip -c "$TMP" > "$FINAL"
+gzip -c "$TMP" > "$FINAL.part"
+mv "$FINAL.part" "$FINAL"
 find "$OUT" -maxdepth 1 -name 'chat_stats-*.db.gz' -mtime +$((KEEP_DAYS - 1)) -delete
 echo "Yedek alındı: $FINAL"
 

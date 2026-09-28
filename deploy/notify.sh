@@ -28,12 +28,14 @@ fi
 API="https://api.telegram.org/bot$TOKEN"
 for chat_id in $ADMINS; do
   if [ -n "$DOCUMENT" ]; then
-    curl -sS -m 120 -o /dev/null -F "chat_id=$chat_id" -F "disable_notification=true" \
-      -F "caption=$MESSAGE" -F "document=@$DOCUMENT" "$API/sendDocument" \
+    printf 'url = "%s/sendDocument"\n' "$API" | curl -sS -m 120 -o /dev/null -K - \
+      -F "chat_id=$chat_id" -F "disable_notification=true" \
+      -F "caption=$MESSAGE" -F "document=@$DOCUMENT" \
       || echo "notify: $chat_id için dosya gönderilemedi" >&2
   else
-    curl -sS -m 30 -o /dev/null --data-urlencode "chat_id=$chat_id" \
-      --data-urlencode "text=$MESSAGE" "$API/sendMessage" \
+    printf 'url = "%s/sendMessage"\n' "$API" | curl -sS -m 30 -o /dev/null -K - \
+      --data-urlencode "chat_id=$chat_id" \
+      --data-urlencode "text=$MESSAGE" \
       || echo "notify: $chat_id için mesaj gönderilemedi" >&2
   fi
 done
