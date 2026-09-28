@@ -1,0 +1,54 @@
+name: test-ve-deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Bağımlılıklar
+        run: pip install -r requirements.txt
+      - name: Python testleri
+        run: python -m unittest discover -s tests -v
+      - name: Betik sözdizimi
+        run: for f in deploy/*.sh deploy/tests/*.sh; do bash -n "$f"; done
+      - name: Satır sonu kontrolü (CRLF yasak)
+        run: |
+          if grep -lI $'\r' deploy/*.sh deploy/tests/*.sh deploy/*.service deploy/*.timer; then
+            echo "CRLF satır sonu bulundu"; exit 1
+          fi
+      - name: Yedekleme testleri
+        run: |
+          sudo apt-get install -y -qq sqlite3
+          bash deploy/tests/test_backup.sh
+
+  deploy:
+    needs: test
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: SSH ayarları
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.SSH_KNOWN_HOSTS }}
+        run: |
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+      - name: Deploy
+        env:
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+        run: ssh -o BatchMode=yes -o ConnectTimeout=20 "deploy@$SERVER_HOST" sudo /usr/local/sbin/messifebot-deploy
