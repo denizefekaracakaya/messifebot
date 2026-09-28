@@ -53,7 +53,9 @@ Free-text messages (not commands) are handled by a rule-based conversation layer
 
 ## Tests
 
+Windows'ta önce UTF-8 çıktı kodlamasını ayarlayın (PowerShell):
 ```
+$env:PYTHONIOENCODING="utf-8"
 .venv\Scripts\python -m unittest discover -s tests -v
 ```
 
