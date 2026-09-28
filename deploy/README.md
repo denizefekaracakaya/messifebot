@@ -29,8 +29,8 @@ Tasarım: `docs/superpowers/specs/2026-09-27-7-24-hosting-design.md`.
    (Oluşan iki dosyayı repoya EKLEMEYİN.)
 
 ## 4. Sunucu kurulumu
-1. `deploy/` klasörünün TAMAMINI ve Actions açık anahtarını sunucuya kopyalayın (yerelde, `telegram-bot/` içinden):
-   `scp -r deploy ubuntu@IP:~/messifebot-deploy && scp messifebot_actions.pub ubuntu@IP:~/`
+1. `deploy/` klasörünün TAMAMINI ve Actions açık anahtarını sunucuya kopyalayın (yerelde, `telegram-bot/` içinden). Önce sunucudaki eski kopyayı silin — `scp -r` var olan bir `~/messifebot-deploy` klasörünün İÇİNE kopyalar (`~/messifebot-deploy/deploy/` oluşur) ve betik yanlışlıkla eski sürümden çalışır:
+   `ssh ubuntu@IP rm -rf ~/messifebot-deploy && scp -r deploy ubuntu@IP:~/messifebot-deploy && scp messifebot_actions.pub ubuntu@IP:~/`
 2. Sunucuda, kopyalanan klasörden çalıştırın: `sudo bash ~/messifebot-deploy/setup_server.sh git@github.com:KULLANICI/messifebot.git ~/messifebot_actions.pub`
    Betik ASLA `/opt/messifebot` içindeki klondan çalıştırılmamalıdır — root, messifebot/deploy kullanıcısının yazabildiği hiçbir dosyayı çalıştırmaz veya kopyalamaz; betik bunu kendisi kontrol edip gerekirse durur.
 3. Betik bir anahtar gösterip bekler: GitHub → repo → Settings → Deploy keys → Add deploy key → yapıştırın (**Allow write access kapalı**) → Enter.
@@ -81,4 +81,4 @@ Not: Windows'ta bot zorla kapatıldıysa ilk sunucu açılışında "önceki ça
       sudo systemctl stop messifebot
       gunzip -c /var/lib/messifebot/backups/chat_stats-YYYYMMDD-HHMM.db.gz | sudo -u messifebot tee /var/lib/messifebot/chat_stats.db >/dev/null
       sudo systemctl start messifebot
-- `deploy/deploy.sh` veya systemd dosyaları değişirse: yerelde `deploy/` klasörünü tekrar sunucuya kopyalayın (`scp -r deploy ubuntu@IP:~/messifebot-deploy`) ve `sudo bash ~/messifebot-deploy/setup_server.sh git@github.com:KULLANICI/messifebot.git` çalıştırın (ASLA `/opt/messifebot` içinden değil).
+- `deploy/deploy.sh` veya systemd dosyaları değişirse: yerelde `deploy/` klasörünü tekrar sunucuya kopyalayın — önce eski kopyayı silin, yoksa `scp -r` var olan `~/messifebot-deploy` klasörünün içine yeni bir `deploy/` açar ve betik eski sürümden çalışır (`ssh ubuntu@IP rm -rf ~/messifebot-deploy && scp -r deploy ubuntu@IP:~/messifebot-deploy`) ve `sudo bash ~/messifebot-deploy/setup_server.sh git@github.com:KULLANICI/messifebot.git` çalıştırın (ASLA `/opt/messifebot` içinden değil).

@@ -18,12 +18,15 @@ GITHUB_ED25519_FP='SHA256:+DiY3wvvV6TuJJhbpZisF/zLDA0zPMSvHdkr4UvCOqU'
 [ "$(id -u)" = 0 ] || { echo "root olarak çalıştırın: sudo bash $0 ..."; exit 1; }
 step() { echo; echo "==> $*"; }
 
-SRC=$(cd "$(dirname "$0")" && pwd)
+SRC=$(cd "$(dirname "$0")" && pwd -P)
+APP_DIR_REAL="$APP_DIR"
+[ -d "$APP_DIR" ] && APP_DIR_REAL=$(cd "$APP_DIR" && pwd -P)
 case "$SRC" in
-  "$APP_DIR"|"$APP_DIR"/*)
-    echo "Bu betiği $APP_DIR içinden çalıştırmayın: root, messifebot kullanıcısının yazabildiği"
-    echo "dosyaları asla çalıştırmamalı/kopyalamamalıdır. Önce deploy/ klasörünü kendi ev"
-    echo "dizininize kopyalayın (ör. scp -r deploy ubuntu@IP:~/messifebot-deploy) ve oradan çalıştırın."
+  "$APP_DIR_REAL"|"$APP_DIR_REAL"/*)
+    echo "Bu betiği $APP_DIR içinden (veya oraya sembolik bağlantı veren bir yerden) çalıştırmayın:"
+    echo "root, messifebot kullanıcısının yazabildiği dosyaları asla çalıştırmamalı/kopyalamamalıdır."
+    echo "Önce deploy/ klasörünü kendi ev dizininize kopyalayın (ör. scp -r deploy ubuntu@IP:~/messifebot-deploy)"
+    echo "ve oradan çalıştırın."
     exit 1
     ;;
 esac
@@ -52,8 +55,9 @@ systemctl restart systemd-journald
 step "Kullanıcılar ve dizinler"
 id "$APP_USER" >/dev/null 2>&1 || useradd --system --home-dir "$DATA_DIR" --create-home --shell /usr/sbin/nologin "$APP_USER"
 id deploy >/dev/null 2>&1 || useradd --create-home --shell /bin/bash deploy
-install -d -o "$APP_USER" -g "$APP_USER" -m 750 "$DATA_DIR" "$DATA_DIR/backups"
-install -d -o "$APP_USER" -g "$APP_USER" -m 755 "$APP_DIR"
+install -d -o "$APP_USER" -g "$APP_USER" -m 750 "$DATA_DIR"
+sudo -u "$APP_USER" install -d -m 750 "$DATA_DIR/backups"
+[ -d "$APP_DIR" ] || install -d -o "$APP_USER" -g "$APP_USER" -m 755 "$APP_DIR"
 install -d -o deploy -g deploy -m 700 /home/deploy/.ssh
 sudo -u deploy touch /home/deploy/.ssh/authorized_keys
 sudo -u deploy chmod 600 /home/deploy/.ssh/authorized_keys
@@ -67,7 +71,7 @@ if [ -n "$DEPLOY_PUBKEY_FILE" ]; then
 fi
 
 step "GitHub erişimi (salt-okunur deploy anahtarı)"
-install -d -o "$APP_USER" -g "$APP_USER" -m 700 "$DATA_DIR/.ssh"
+sudo -u "$APP_USER" install -d -m 700 "$DATA_DIR/.ssh"
 if [ ! -f "$DATA_DIR/.ssh/id_ed25519" ]; then
   sudo -u "$APP_USER" ssh-keygen -q -t ed25519 -N '' -C "messifebot-server" -f "$DATA_DIR/.ssh/id_ed25519"
 fi
