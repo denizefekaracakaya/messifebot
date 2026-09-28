@@ -69,6 +69,10 @@ async def on_startup(application: Application):
 
 
 async def on_shutdown(application: Application):
+    # PTB, post_init (on_startup) sırasında bir istisna fırlasa bile post_shutdown'ı
+    # (bu fonksiyonu) `finally` içinde çağırır. Yani başlangıçta patlayan bir çalıştırma
+    # burada "düzgün kapanmadı" değil "düzgün kapandı" olarak işaretlenir. Bu durum
+    # heartbeat/deploy geri dönüş mekanizmasıyla zaten yakalanır (healthy() kontrolü).
     mark_clean_shutdown(db)
     logger.info("bot düzgün kapandı")
 
