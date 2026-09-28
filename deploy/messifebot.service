@@ -2,8 +2,7 @@
 Description=MessifeBot Telegram botu
 After=network-online.target
 Wants=network-online.target
-StartLimitIntervalSec=600
-StartLimitBurst=5
+StartLimitIntervalSec=0
 
 [Service]
 Type=simple
@@ -15,6 +14,8 @@ Environment=PYTHONUNBUFFERED=1
 ExecStart=/opt/messifebot/.venv/bin/python -m bot.main
 Restart=always
 RestartSec=10
+RestartSteps=5
+RestartMaxDelaySec=300
 TimeoutStopSec=30
 NoNewPrivileges=true
 ProtectSystem=full

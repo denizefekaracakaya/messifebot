@@ -58,7 +58,7 @@ id deploy >/dev/null 2>&1 || useradd --create-home --shell /bin/bash deploy
 install -d -o "$APP_USER" -g "$APP_USER" -m 750 "$DATA_DIR"
 sudo -u "$APP_USER" install -d -m 750 "$DATA_DIR/backups"
 [ -d "$APP_DIR" ] || install -d -o "$APP_USER" -g "$APP_USER" -m 755 "$APP_DIR"
-install -d -o deploy -g deploy -m 700 /home/deploy/.ssh
+sudo -u deploy install -d -m 700 /home/deploy/.ssh
 sudo -u deploy touch /home/deploy/.ssh/authorized_keys
 sudo -u deploy chmod 600 /home/deploy/.ssh/authorized_keys
 if [ -n "$DEPLOY_PUBKEY_FILE" ]; then
@@ -111,7 +111,7 @@ fi
 step "Deploy betiği ve sudo yetkisi"
 install -o root -g root -m 755 "$SRC/deploy.sh" /usr/local/sbin/messifebot-deploy
 SUDOERS_TMP=$(mktemp)
-echo 'deploy ALL=(root) NOPASSWD: /usr/local/sbin/messifebot-deploy' > "$SUDOERS_TMP"
+echo 'deploy ALL=(root) NOPASSWD: /usr/local/sbin/messifebot-deploy ""' > "$SUDOERS_TMP"
 visudo -cf "$SUDOERS_TMP" >/dev/null
 install -o root -g root -m 440 "$SUDOERS_TMP" /etc/sudoers.d/messifebot-deploy
 rm -f "$SUDOERS_TMP"
